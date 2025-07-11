@@ -271,16 +271,16 @@ def analyze_vol_scaled_adaptive_strategy(price_paths: np.ndarray, total_investme
 
 # --- Visualization Functions ---
 def plot_performance_distribution(results_df: pd.DataFrame, col_name: str, title: str):
-    fig = px.histogram(results_df, x=col_name, nbins=75, histnorm='probability density', title=title, labels={col_name: 'Performance (bps)'})
+    fig = px.histogram(results_df, x=col_name, nbins=200, histnorm='probability density', title=title, labels={col_name: 'Performance (bps)'})
     fig.add_vline(x=0.0, line_width=2, line_dash="dash", line_color="red", annotation_text="Neutral (0 bps)", annotation_position="top right")
     return fig
 
 def plot_investment_days_distribution(results_df: pd.DataFrame):
-    fig = px.histogram(results_df, x='actual_investment_days', nbins=50, title='Distribution of Buyback Program Duration', labels={'actual_investment_days': 'Number of Days to Complete Buyback'})
+    fig = px.histogram(results_df, x='actual_investment_days', nbins=200, title='Distribution of Buyback Program Duration', labels={'actual_investment_days': 'Number of Days to Complete Buyback'})
     return fig
 
 def plot_executed_usd_distribution(results_df: pd.DataFrame):
-    fig = px.histogram(results_df, x='total_usd_invested', nbins=50, title='Distribution of Total Capital Deployed', labels={'total_usd_invested': 'Total USD Deployed'})
+    fig = px.histogram(results_df, x='total_usd_invested', nbins=200, title='Distribution of Total Capital Deployed', labels={'total_usd_invested': 'Total USD Deployed'})
     return fig
 
 def plot_single_path_dca_analysis(price_path: np.ndarray, daily_investment: float):
@@ -417,7 +417,7 @@ st.markdown("This application uses a Monte Carlo simulation to analyze and compa
 
 with st.sidebar:
     st.header("⚙️ Market Parameters")
-    s0 = st.number_input("Initial Stock Price ($S_0$)", 1.0, value=100.0, step=1.0, help="The starting stock price for all simulations.")
+    s0 = st.number_input("Initial Stock Price ($S_0$)", 1, value=100, step=1, help="The starting stock price for all simulations.")
     mu = st.slider("Annualized Drift (μ)", -0.5, 0.5, 0.0, 0.01, "%.2f", help="The expected annualized rate of return for the stock.")
     sigma = st.slider("Annualized Volatility (σ)", 0.05, 1.0, 0.25, 0.01, "%.2f", help="The annualized standard deviation of the stock's log returns, a measure of risk and price fluctuation.")
     
@@ -427,16 +427,16 @@ with st.sidebar:
     strategy_params = {'name': strategy_name}
     if strategy_name == 'Daily DCA':
         n_days = st.number_input("Buyback Period (Days)", 10, value=125, step=5, help="The fixed number of days over which to execute the buyback.")
-        daily_investment = st.number_input("Daily Buyback Amount (USD)", 1.0, value=1000000.0, step=10000.0, format="%f", help="The fixed US dollar amount to spend on repurchases each day.")
+        daily_investment = st.number_input("Daily Buyback Amount (USD)", 1, value=1000000, step=10000, help="The fixed US dollar amount to spend on repurchases each day.")
         strategy_params['daily_investment'] = daily_investment
     else: # All other strategies
         n_days = st.number_input("Max Simulation Period (Days)", 10, value=300, step=5, help="The absolute maximum number of days for the simulation to run.")
-        total_investment = st.number_input("Total Buyback Amount (USD)", 1000.0, value=125000000.0, step=100000.0, format="%f", help="The total capital authorized for the buyback program.")
+        total_investment = st.number_input("Total Buyback Amount (USD)", 1000000, value=1000000, step=1000000, help="The total capital authorized for the buyback program.")
         
         st.markdown("**Execution Duration Range**")
         col1, col2 = st.columns(2)
-        min_duration = col1.number_input("Min Duration (Days)", 10, value=75, step=5, help="The strategy will aim to execute for at least this many days.")
-        max_duration = col2.number_input("Max Duration (Days)", min_duration + 1, value=175, step=5, help="The strategy will not execute beyond this day, even if budget remains.")
+        min_duration = col1.number_input("Min Duration (Days)", 10, value=80, step=5, help="The strategy will aim to execute for at least this many days.")
+        max_duration = col2.number_input("Max Duration (Days)", min_duration + 1, value=160, step=5, help="The strategy will not execute beyond this day, even if budget remains.")
         
         strategy_params.update({
             'total_investment': total_investment,
@@ -445,7 +445,7 @@ with st.sidebar:
         })
 
         if strategy_name == 'Adaptive DCA':
-            base_n_days = st.number_input("Target Duration (Days)", 10, value=125, step=5, help="The desired or 'baseline' buyback duration.")
+            base_n_days = st.number_input("Target Duration (Days)", 10, value=120, step=5, help="The desired or 'baseline' buyback duration.")
             if min_duration >= base_n_days or max_duration <= base_n_days:
                 st.error("Target Duration must be between Min and Max Duration.")
                 st.stop()
@@ -459,7 +459,7 @@ with st.sidebar:
             strategy_params['sigma'] = sigma
 
     st.header("🎲 Monte Carlo Parameters")
-    n_paths = st.number_input("Number of Simulations", 100, value=500, step=100, help="The number of independent price paths to simulate.")
+    n_paths = st.number_input("Number of Simulations", 100, value=1500, step=100, help="The number of independent price paths to simulate.")
     run_button = st.button("🚀 Run Simulation", type="primary", use_container_width=True)
 
 if run_button:
@@ -476,11 +476,12 @@ if 'results_df' in st.session_state and isinstance(st.session_state.results_df, 
     st.subheader("Key Performance Indicators (KPIs)")
     st.markdown("These metrics summarize the performance of the strategy across all simulated paths.")
     
-    cols = st.columns(4)
+    cols = st.columns(5)
     cols[0].metric("Median Total Performance", f"{results['total_performance_bps'].median():.1f} bps", help="The median of the total outperformance (Timing + Duration). Positive is better.")
-    cols[1].metric("Median Timing Alpha", f"{results['timing_alpha_bps'].median():.1f} bps", help="The median value added by daily buy/sell decisions within a fixed period.")
-    cols[2].metric("Median Duration Alpha", f"{results['duration_alpha_bps'].median():.1f} bps", help="The median value added by dynamically changing the program's length.")
-    cols[3].metric("Favorable Outcomes", f"{(results['total_performance_bps'] > 0).mean():.1%}", help="Percentage of outcomes where the total performance was positive.")
+    cols[1].metric("Average Total Performance", f"{results['total_performance_bps'].mean():.1f} bps", help="The average of the total outperformance (Timing + Duration). Positive is better.")
+    cols[2].metric("Median Timing Alpha", f"{results['timing_alpha_bps'].median():.1f} bps", help="The median value added by daily buy/sell decisions within a fixed period.")
+    cols[3].metric("Median Duration Alpha", f"{results['duration_alpha_bps'].median():.1f} bps", help="The median value added by dynamically changing the program's length.")
+    cols[4].metric("Favorable Outcomes", f"{(results['total_performance_bps'] > 0).mean():.1%}", help="Percentage of outcomes where the total performance was positive.")
 
     tab_titles = ["Summary & Distributions", "Single Path Deep Dive", "Aggregate Analysis", "Raw Data", "Explanations"]
     tab1, tab2, tab3, tab4, tab5 = st.tabs(tab_titles)
@@ -493,7 +494,7 @@ if 'results_df' in st.session_state and isinstance(st.session_state.results_df, 
             c2.plotly_chart(plot_investment_days_distribution(results), use_container_width=True)
         else:
             c2.markdown("#### Terminal Stock Price Distribution")
-            c2.plotly_chart(px.histogram(results, x='terminal_price', nbins=75), use_container_width=True)
+            c2.plotly_chart(px.histogram(results, x='terminal_price', nbins=275), use_container_width=True)
         
         if st.session_state.strategy_params['name'] != 'Daily DCA':
             st.markdown("#### Performance Alpha Components")
