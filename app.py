@@ -283,7 +283,7 @@ def plot_executed_usd_distribution(results_df: pd.DataFrame):
     fig = px.histogram(results_df, x='total_usd_invested', nbins=200, title='Distribution of Total Capital Deployed', labels={'total_usd_invested': 'Total USD Deployed'})
     return fig
 
-def plot_single_path_dca_analysis(price_path: np.ndarray, daily_investment: float):
+def plot_single_path_dca_analysis(price_path: np.ndarray, daily_investment: float, path_number: int):
     investment_prices = price_path[1:]
     days_axis = np.arange(1, len(price_path))
     shares_daily = daily_investment / investment_prices
@@ -299,7 +299,7 @@ def plot_single_path_dca_analysis(price_path: np.ndarray, daily_investment: floa
     fig.add_trace(go.Scatter(x=days_axis, y=running_simple_avg_price, name="Running Simple Avg. Price", line=dict(color='orange', dash='dash')), secondary_y=False)
     fig.add_trace(go.Scatter(x=days_axis, y=running_performance_bps, name="Performance (bps)", line=dict(color='firebrick', dash='dot')), secondary_y=True)
     
-    fig.update_layout(title_text=f'Deep Dive on Path #1 (Daily Fixed Amount Strategy)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    fig.update_layout(title_text=f'Deep Dive on Path #{path_number} (Daily Fixed Amount Strategy)', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     fig.update_yaxes(title_text="<b>Price (USD)</b>", secondary_y=False)
     fig.update_yaxes(title_text="<b>Performance (bps)</b>", secondary_y=True)
     return fig
@@ -507,11 +507,26 @@ if 'results_df' in st.session_state and isinstance(st.session_state.results_df, 
         st.markdown("### Single Path Deep Dive")
         first_path = st.session_state.price_paths[0]
         if st.session_state.strategy_params['name'] == 'Daily DCA':
-            fig = plot_single_path_dca_analysis(first_path, st.session_state.strategy_params['daily_investment'])
+            fig = plot_single_path_dca_analysis(first_path, st.session_state.strategy_params['daily_investment'], path_number=1)
         else:
             fig = plot_single_path_variable_analysis(first_path, st.session_state.strategy_params)
         st.plotly_chart(fig, use_container_width=True)
 
+        st.markdown("### Second Path Deep Dive")
+        first_path = st.session_state.price_paths[1]
+        if st.session_state.strategy_params['name'] == 'Daily DCA':
+            fig = plot_single_path_dca_analysis(first_path, st.session_state.strategy_params['daily_investment'],path_number=2)
+        else:
+            fig = plot_single_path_variable_analysis(first_path, st.session_state.strategy_params)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("### Third Path Deep Dive")
+        first_path = st.session_state.price_paths[2]
+        if st.session_state.strategy_params['name'] == 'Daily DCA':
+            fig = plot_single_path_dca_analysis(first_path, st.session_state.strategy_params['daily_investment'],path_number=3)
+        else:
+            fig = plot_single_path_variable_analysis(first_path, st.session_state.strategy_params)
+        st.plotly_chart(fig, use_container_width=True)
     with tab3:
         st.markdown("### Aggregate Analysis")
         st.plotly_chart(plot_performance_vs_terminal_price(results), use_container_width=True)
